@@ -22,11 +22,16 @@ def read_gen(fileobj):
     natoms = int(line[0])
     if line[1] == 'S':
         supercell = True
+        cartesian = True
+    elif line[1] == 'F': # Added this to ensure compatability with DFTB+ 18.2
+        supercell = True
+        cartesian = False
     elif line[1] == 'C':
         supercell = False
+        cartesian = True
     else:
-        raise IOError('Error in line #1: only C (Cluster) or S (Supercell) ' +
-                      'are valid options')
+        raise IOError('Error in line #1: only C (Cluster), S (Supercell) or ' +
+                      'F (Fractional) are valid options')
 
     # Read atomic symbols
     line = lines[1].split()
@@ -45,24 +50,34 @@ def read_gen(fileobj):
         dummy, symbolid, x, y, z = line.split()[:5]
         symbols.append(symboldict[int(symbolid)])
         positions.append([float(x), float(y), float(z)])
-    image = Atoms(symbols=symbols, positions=positions)
     del lines[:natoms]
 
     # If Supercell, parse periodic vectors
-    if not supercell:
-        return image
-    else:
+    if supercell:
         # Dummy line: line after atom positions is not uniquely defined 
         # in gen implementations, and not necessary in DFTB package
         del lines[:1]
-        image.set_pbc([True, True, True])
         p = []
         for i in range(3):
             x, y, z = lines[i].split()[:3]
             p.append([float(x), float(y), float(z)])
-        image.set_cell([(p[0][0], p[0][1], p[0][2]), (p[1][0], p[1][1], 
-                p[1][2]), (p[2][0], p[2][1], p[2][2])])
-        return image
+
+    # Create the Atoms object based on what data were available in the .gen file
+    # Importantly: Whether the positions were given as cartesian/fractional 
+    # coordinates.
+    if not supercell:
+        image = Atoms(symbols=symbols, positions=positions)
+    else:
+        pbc=[True, True, True]
+        cell=[(p[0][0], p[0][1], p[0][2]), (p[1][0], p[1][1], 
+               p[1][2]), (p[2][0], p[2][1], p[2][2])]
+        if cartesian:
+            image = Atoms(symbols=symbols, pbc=pbc, positions=positions, 
+                            cell=cell)
+        else:
+            image = Atoms(symbols=symbols, pbc=pbc, cell=cell,
+                        scaled_positions=positions)
+    return image
         
 
 def write_gen(fileobj, images):
