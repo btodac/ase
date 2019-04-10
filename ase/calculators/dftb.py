@@ -177,7 +177,7 @@ class Dftb(FileIOCalculator):
                         offsets[i] += 0.5
                 key = initkey + '_empty%03d' % 3
                 self.parameters[key] = ' '.join(map(str, offsets))
-                Nkpts = np.ceil(self.kpts[0]*self.kpts[1]*self.kpts[2]*0.5)
+                #Nkpts = np.ceil(self.kpts[0]*self.kpts[1]*self.kpts[2]*0.5)
             elif self.kpts_coord is not None:
                 for i, c in enumerate(self.kpts_coord):
                     key = initkey + '_empty%09d'  % i
@@ -257,8 +257,17 @@ class Dftb(FileIOCalculator):
         outfile.write('} \n')
         outfile.write('Parallel { \n')
         outfile.write('   Groups = 8  \n')
-        outfile.write('   Blacs = 32  \n')
+        outfile.write('   Blacs = {  \n')
+        outfile.write('      BlockSize = 64  \n')
+        outfile.write('   }  \n')
         outfile.write('} \n')
+        outfile.close()
+
+    def set(self, **kwargs):
+        changed_parameters = FileIOCalculator.set(self, **kwargs)
+        if changed_parameters:
+            self.reset()
+        return changed_parameters
 
 
     def check_state(self, atoms):
