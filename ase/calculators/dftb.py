@@ -255,14 +255,10 @@ class Dftb(FileIOCalculator):
         outfile.write('ParserOptions { \n')
         outfile.write('   IgnoreUnprocessedNodes = Yes  \n')
         outfile.write('} \n')
+        outfile.write('Parallel { \n')
+        outfile.write('   UseOmpThreads = Yes  \n')
+        outfile.write('} \n')
 
-        outfile.close()
-
-    def set(self, **kwargs):
-        changed_parameters = FileIOCalculator.set(self, **kwargs)
-        if changed_parameters:
-            self.reset()
-        return changed_parameters
 
     def check_state(self, atoms):
         system_changes = FileIOCalculator.check_state(self, atoms)
