@@ -9,6 +9,7 @@ See accompanying license files for details.
 """
 
 import numpy as np
+import re
 
 import ase.units
 from ase.data import chemical_symbols
@@ -134,17 +135,47 @@ def read_gaussian(filename):
     f = open(filename, 'r')
     lines = f.readlines()
     f.close()
+    
+    atomsymbol = '\s*\D+\s*'
+    atomnumber = '\s*\d+\s*'
+    atomline = '.\s*((\D+)|(\d+))\s+[0-1]*\s*([-]*\d+\.\d+)\s+[-]*(\d+\.\d+)\s+[-]*(\d+\.\d+)'
+    aline = re.compile(atomline)
+    asym = re.compile(atomsymbol)
+    anum = re.compile(atomnumber)
 
     atoms = Atoms()
-    for n, line in enumerate(lines):
-        if ('#' in line):
-            i = 0
-            while (lines[n + i + 5] != '\n'):
-                info = lines[n + i + 5].split()
-                symbol = info[0]
-                position = [float(info[1]), float(info[2]), float(info[3])]
+    pbc = False
+    cell = np.array([])
+
+    for line in lines:
+        p = aline.search(line)
+        if p is not None:
+            a = p.group().split()
+            if asym.search(a[0]) is not None: 
+                symbol = a[0]
+            elif anum.search(a[0]) is not None: 
+                atomicnum = int(a[0])
+                symbol = chemical_symbols[atomicnum]
+            if len(a) is 4: position = [float(a[1]), float(a[2]), float(a[3])]
+            elif len(a) is 4: position = [float(a[2]), float(a[3]), float(a[4])]
+            print(a)
+            if symbol.find('Tv') == -1:
                 atoms += Atom(symbol, position=position)
-                i += 1
+                isperiodic = False
+            else:
+                if not isperiodic:
+                    cell = np.zeros([3,3])
+                    cell[0][:] = position
+                    Ndim = 1
+                    isperiodic = True
+                else:
+
+                    cell[Ndim][:] = position
+                    Ndim += 1
+    if isperiodic:
+        pbc = [True] * Ndim + [False] *(3-Ndim)
+        atoms.set_pbc(pbc)
+        atoms.set_cell(cell)
     return atoms
 
 

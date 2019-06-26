@@ -34,7 +34,7 @@ The keywords are given, for instance, as follows::
 import os
 
 import numpy as np
-
+from ase.io.gen import read_gen
 from ase.calculators.calculator import (FileIOCalculator, kpts2ndarray,
                                         kpts2sizeandoffsets)
 from ase.units import Hartree, Bohr
@@ -256,10 +256,11 @@ class Dftb(FileIOCalculator):
         outfile.write('   IgnoreUnprocessedNodes = Yes  \n')
         outfile.write('} \n')
         outfile.write('Parallel { \n')
-        outfile.write('   Groups = 8  \n')
-        outfile.write('   Blacs = {  \n')
-        outfile.write('      BlockSize = 64  \n')
-        outfile.write('   }  \n')
+        outfile.write( '   UseOmpThreads = Yes  \n')
+        #outfile.write('   Groups = 8  \n')
+        #outfile.write('   Blacs = {  \n')
+        #outfile.write('      BlockSize = 64  \n')
+        #outfile.write('   }  \n')
         outfile.write('} \n')
         outfile.close()
 
@@ -291,7 +292,7 @@ class Dftb(FileIOCalculator):
         self.atoms = None
         if self.pcpot:
             self.pcpot.write_mmcharges('dftb_external_charges.dat')
-
+#This next section is untrue: Multiple file are read!
     def read_results(self):
         """ all results are read from results.tag file
             It will be destroyed after it is read to avoid
@@ -309,7 +310,15 @@ class Dftb(FileIOCalculator):
         forces = self.read_forces()
         self.results['forces'] = forces
         self.mmpositions = None
-
+        # Get positions and pbc's if there
+        if self.parameters['Driver_OutputPrefix']:
+            genname = self.parameters['Driver_OutputPrefix'] + '.gen'
+        else:
+            genname = 'geo_end.gen'
+        output = read_gen(os.path.join(self.directory, genname))
+        self.results['positions'] = output.get_positions()
+        if output.get_pbc() is not None:
+            self.results['pbc'] = output.get_pbc()
         # stress stuff begins
         sstring = 'stress'
         have_stress = False

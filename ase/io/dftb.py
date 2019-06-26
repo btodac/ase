@@ -160,8 +160,6 @@ def read_dftb_lattice(fileobj='md.out',images=None):
         return lattices
 
 
-
-
 def write_dftb_velocities(atoms, filename='velocities.txt'):
     """Method to write velocities (in atomic units) from ASE
        to a file to be read by dftb+
